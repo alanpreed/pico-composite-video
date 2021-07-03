@@ -18,8 +18,8 @@ project(pico-composite-video C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
+add_executable(pico-composite-video main.c )
 
-add_executable(pico-composite-video pico-composite-video.c )
 
 pico_set_program_name(pico-composite-video "pico-composite-video")
 pico_set_program_version(pico-composite-video "0.1")
