@@ -1,0 +1,141 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+.define DATA_IRQ 4
+.program cvsync
+.side_set 1
+
+; Load the number of video lines per field into OSR
+pull side 0
+; Y register used as odd/even flag: 1 = odd
+
+
+.wrap_target
+vsync_start:
+    ; First set of short pulses: 6 for even, 5 for odd
+    jmp !y set_even_counter side 0
+    set x, 3 side 1 ; odd pulses, 3 + 1 + 1
+    jmp vsync_short_pulse side 1 [13]
+set_even_counter:
+    set x, 4 side 1 [14] ; even_pulses, 4 + 1 + 1
+
+vsync_short_pulse:
+    nop side 0
+    jmp x-- vsync_short_pulse [14] side 1
+
+    ; Long vsync pulses, always 5x
+    set x, 4 side 0 [13]
+vsync_long_start:
+    jmp !x vsync_long_end [1] side 1;
+    jmp x-- vsync_long_start [13] side 0;
+vsync_long_end:
+
+    ; Second set of short pulses: 5 for even, 4 for odd
+    jmp !y set_even_counter_2 side 0
+    set x, 2 side 1 ; odd pulses, 2 + 1 + 1
+    jmp flip_field_flag side 1 [12] ; Delays are 1 cycle less due to flip instruction
+set_even_counter_2:
+    set x, 3 side 1 [13] ; even_pulses, 3 + 1 + 1
+    
+flip_field_flag:
+    mov y ! y side 1 ; flip y between fields
+
+vsync_short_pulse_2:
+    nop side 0
+    jmp x-- vsync_short_pulse_2 [14] side 1;
+
+    ; 17 line blanking period
+    set x 16 side 0 [1]
+hsync_blank_start:
+    nop side 1 [14]
+    jmp !x hsync_blank_end side 1 [14]; 30us blank interval
+    jmp x-- hsync_blank_start side 0 [1] ; 4us hsync pulse
+hsync_blank_end:
+
+    ; 288 lines of video data
+    mov x osr side 0 [1]
+hsync_video:
+    nop side 1 [2] ; 6us back porch
+    irq set DATA_IRQ side 1 [12] ; 52us data out
+    ; nop side 1 [12]
+    jmp !x vsync_start side 1 [13] ; 2us front porch + 12 cycles data out, 
+    jmp x-- hsync_video side 0 [1] ; 4us hsync pulse
+
+.wrap
+
+.program cvdata
+.side_set 1
+.wrap_target
+    wait 1 irq DATA_IRQ side 0
+    nop side 1 [15]
+    nop side 1 [15]
+    nop side 1 [15]
+    nop side 1 [15]
+.wrap
+
+% c-sdk {/*
+static inline void cvdata_program_init(PIO pio, uint sm, uint offset, float clockdiv, uint data_pin) {
+    pio_sm_config c = cvdata_program_get_default_config(offset);
+
+    // Map the state machine's OUT and SIDE pin group to one pin, namely the `pin`
+    // parameter to this function.
+    sm_config_set_set_pins(&c, data_pin, 1);
+    sm_config_set_sideset_pins(&c, data_pin);
+
+    sm_config_set_clkdiv(&c, clockdiv);
+
+    // Set this pin's GPIO function (connect PIO to the pad)
+    pio_gpio_init(pio, data_pin);
+
+    // Set the pin direction to output at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, data_pin, 1, true);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+
+    // Set the state machine running
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline void cvsync_program_init(PIO pio, uint sm, uint offset, float clockdiv, uint sync_pin) {
+    pio_sm_config c = cvsync_program_get_default_config(offset);
+
+    // sm_config_set_sideset(pio, &c, 1, true, false);
+
+    // Map the state machine's OUT and SIDE pin group to one pin, namely the `pin`
+    // parameter to this function.
+    sm_config_set_set_pins(&c, sync_pin, 1);
+    sm_config_set_sideset_pins(&c, sync_pin);
+
+    // Set the clock speed
+    sm_config_set_clkdiv(&c, clockdiv);
+
+    // Set this pin's GPIO function (connect PIO to the pad)
+    pio_gpio_init(pio, sync_pin);
+
+    // Set the pin direction to output at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, sync_pin, 1, true);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+
+    // Tell the state machine the number of video lines per frame (minus 1)
+    pio_sm_put(pio, sm, 287);
+
+    // Set the state machine running
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline void cvideo_init(PIO pio, uint data_pin, uint sync_pin) {
+    uint h_bits = 64;
+    float data_clockdiv =  125 / (h_bits / 52.0);
+
+    uint offset_sync = pio_add_program(pio, &cvsync_program);
+    uint offset_data = pio_add_program(pio, &cvdata_program);
+    cvdata_program_init(pio, 0, offset_data, data_clockdiv, data_pin);
+    cvsync_program_init(pio, 1, offset_sync, 250, sync_pin);
+}*/
+%}

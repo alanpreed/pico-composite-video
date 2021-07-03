@@ -5,13 +5,16 @@
 #include "hardware/timer.h"
 #include "hardware/clocks.h"
 #include "hardware/uart.h"
-
+#include "cvideo/cvideo.h"
 
 
 int64_t alarm_callback(alarm_id_t id, void *user_data) {
     // Put your timeout handler code in here
     return 0;
 }
+
+const uint8_t cvideo_data_pin = 2;
+const uint8_t cvideo_sync_pin = 3;
 
 
 int main()
@@ -25,7 +28,12 @@ int main()
     add_alarm_in_ms(2000, alarm_callback, NULL, false);
 
     puts("Hello, world!");
+
+    cvideo_init(pio0, cvideo_data_pin, cvideo_sync_pin);
+
     printf("Test\r\n");
+
+    while(1);
 
     return 0;
 }

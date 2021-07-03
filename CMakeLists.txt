@@ -18,7 +18,14 @@ project(pico-composite-video C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(pico-composite-video main.c )
+add_executable(pico-composite-video)
+
+pico_generate_pio_header(${PROJECT_NAME}  
+        ${CMAKE_CURRENT_LIST_DIR}/cvideo/cvideo.pio
+)
+# add_executable(pico-composite-video main.c)
+
+target_sources(pico-composite-video PRIVATE main.c cvideo/cvideo.c)
 
 
 pico_set_program_name(pico-composite-video "pico-composite-video")
