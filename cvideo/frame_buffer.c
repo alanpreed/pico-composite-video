@@ -32,9 +32,15 @@ void buffer_draw_rect(uint x, uint y, uint width, uint height) {
 
 
 uint32_t* buffer_fetch_line(void) {
-
   uint32_t *line = frame_buffer[current_line];
+  current_line = current_line + 2;
+  
+  if (current_line == CVIDEO_LINES + 1){
+    current_line = 0;
+  }
+  else if (current_line == CVIDEO_LINES){
+    current_line = 1;
+  }
 
-  current_line = (current_line + 2) % CVIDEO_LINES;
   return line;
 }
