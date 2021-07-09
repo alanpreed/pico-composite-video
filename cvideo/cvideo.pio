@@ -4,12 +4,13 @@
 ; SPDX-License-Identifier: BSD-3-Clause
 ;
 
-.define DATA_IRQ 0
+.define PUBLIC DATA_IRQ 0
+; .define PUBLIC LOAD_FIFO_IRQ 1
 .program cvsync
 .side_set 1
 
 ; Load the number of video lines per field into OSR
-pull side 0
+; pull side 0
 ; Y register used as odd/even flag: 1 = odd
 
 
@@ -56,16 +57,29 @@ hsync_blank_start:
 hsync_blank_end:
 
     ; 288 lines of video data
+    
+    ;irq set LOAD_FIFO_IRQ side 0 ; Flag program to begin loading FIFO
     mov x osr side 0 [1]
 hsync_video:
     nop side 1 [2] ; 6us back porch
-    irq set DATA_IRQ side 1 [12] ; 52us data out
-    jmp !x vsync_start side 1 [13] ; 2us front porch + 12 cycles data out, 
+    irq set DATA_IRQ side 1;1 [13] ; 52us data out
+    nop [12] side 1
+    jmp !x vsync_start side 1 [12] ; 2us front porch + 12 cycles data out,
+    ; irq set LOAD_FIFO_IRQ side 0 
     jmp x-- hsync_video side 0 [1] ; 4us hsync pulse
 
 .wrap
 
 .program cvdata
 .wrap_target
-    out pins, 1 [31]
+    set pins 0
+    mov y x
+    wait 1 irq DATA_IRQ
+PUBLIC data_out:
+    out pins, 1 [30]
+    jmp y-- data_out
+PUBLIC data_done:
+
+    ;out null 32
 .wrap
+
