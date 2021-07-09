@@ -4,7 +4,7 @@
 #include "hardware/pio.h"
 
 #define CVIDEO_LINES 576
-#define CVIDEO_PIX_PER_LINE 64
+#define CVIDEO_PIX_PER_LINE 768
 
 typedef uint32_t (*cvideo_data_callback_t)(void); 
 

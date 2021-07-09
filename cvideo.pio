@@ -76,7 +76,7 @@ hsync_video:
     mov y x
     wait 1 irq DATA_IRQ
 PUBLIC data_out:
-    out pins, 1 [30]
+    out pins, 1 ; [30]
     jmp y-- data_out
 PUBLIC data_done:
 

@@ -7,4 +7,6 @@ void renderer_init(void);
 
 void renderer_draw_rect(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 
+void renderer_draw_image(unsigned int x, unsigned int y, unsigned int width, unsigned int height, char *data);
+
 #endif

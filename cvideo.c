@@ -32,7 +32,7 @@ void cvideo_init(PIO pio, uint data_pin, uint sync_pin, cvideo_data_callback_t c
     }
 
     // Run the data clock 32x faster than needed to reduce horizontal jitter due to synchronisation between SMs
-    float data_clockdiv = (clock_get_hz(clk_sys) / (CVIDEO_PIX_PER_LINE / DATA_INTERVAL)) /  32;
+    float data_clockdiv = (clock_get_hz(clk_sys) / (CVIDEO_PIX_PER_LINE / DATA_INTERVAL)) / 2;// /  32;
     float sync_clockdiv = clock_get_hz(clk_sys) * SYNC_INTERVAL;// / SYNC_CLOCK_HZ;
 
     printf("Data clockdiv %f\r\n", data_clockdiv);

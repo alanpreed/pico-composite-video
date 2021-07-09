@@ -8,6 +8,8 @@
 #include "renderer.h"
 #include "connections.h"
 
+#include "test.xbm"
+
 
 int main()
 {
@@ -19,12 +21,14 @@ int main()
     puts("Hello, world!");
     renderer_init();
 
-    renderer_draw_rect(5, 300, 1, 40);
-    renderer_draw_rect(10, 300, 1, 40);
+    // renderer_draw_rect(5, 300, 1, 40);
+    // renderer_draw_rect(10, 300, 1, 40);
 
-    renderer_draw_rect(5, 410, 1, 40);
-    renderer_draw_rect(10, 410, 1, 40);
-    renderer_draw_rect(5, 450, 6, 40);
+    // renderer_draw_rect(5, 410, 1, 40);
+    // renderer_draw_rect(10, 410, 1, 40);
+    // renderer_draw_rect(5, 450, 6, 40);
+
+    renderer_draw_image(10, 100, test_width, test_height, test_bits);
 
     printf("Test\r\n");
     printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
