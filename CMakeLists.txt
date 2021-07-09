@@ -21,11 +21,11 @@ pico_sdk_init()
 add_executable(pico-composite-video)
 
 pico_generate_pio_header(${PROJECT_NAME}  
-        ${CMAKE_CURRENT_LIST_DIR}/cvideo/cvideo.pio
+        ${CMAKE_CURRENT_LIST_DIR}/cvideo.pio
 )
 # add_executable(pico-composite-video main.c)
 
-target_sources(pico-composite-video PRIVATE main.c cvideo/cvideo.c cvideo/frame_buffer.c)
+target_sources(pico-composite-video PRIVATE main.c cvideo.c renderer.c)
 
 
 pico_set_program_name(pico-composite-video "pico-composite-video")
