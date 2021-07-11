@@ -10,6 +10,16 @@
 
 #include "test.xbm"
 
+bool redraw = false;
+uint32_t xpos = 0;
+
+bool repeating_timer_callback(struct repeating_timer* t) {
+    // printf("Repeat at %lld\n",time_us_64());
+    redraw = true;
+
+
+    return true;
+}
 
 int main()
 {
@@ -28,12 +38,23 @@ int main()
     // renderer_draw_rect(10, 410, 1, 40);
     // renderer_draw_rect(5, 450, 6, 40);
 
-    renderer_draw_image(10, 100, test_width, test_height, test_bits);
+    // renderer_draw_image(10, 100, test_width, test_height, test_bits);
 
     printf("Test\r\n");
     printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
 
-    while(1);
+    struct repeating_timer timer;
+    add_repeating_timer_ms(25, repeating_timer_callback, NULL, &timer);
+
+    while(1) {
+        if (redraw) {
+            xpos++;
+            renderer_begin_drawing();
+            renderer_draw_rect(xpos, 0, 50, 200);
+            renderer_end_drawing();
+            redraw = false;
+        }
+    }
 
     return 0;
 }

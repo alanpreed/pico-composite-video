@@ -5,15 +5,24 @@
 #include <stdbool.h>
 
 #define LINE_WORD_COUNT CVIDEO_PIX_PER_LINE / 32
+
+typedef uint32_t buffer_t[CVIDEO_LINES][LINE_WORD_COUNT];
+
 volatile int current_line;
 volatile int current_pix;
-
-uint32_t frame_buffer[CVIDEO_LINES][LINE_WORD_COUNT];
+bool drawing_in_progress;
+bool buffer_updated;
+buffer_t buffer_0;
+buffer_t buffer_1;
+buffer_t *output_buffer = &buffer_0;
+buffer_t *drawing_buffer = &buffer_1;
 
 static void set_bit(uint x, uint y, bool value);
+static void renderer_clear(buffer_t *buffer);
+static void update_output_buffer(void);
 
 uint32_t data_callback(void) {
-  uint32_t *line = frame_buffer[current_line];
+  uint32_t *line = (*output_buffer)[current_line];
   uint32_t data = line[current_pix];
 
   current_pix++;
@@ -24,9 +33,11 @@ uint32_t data_callback(void) {
 
     if (current_line == CVIDEO_LINES + 1){
       current_line = 0;
+      update_output_buffer();
     }
     else if (current_line == CVIDEO_LINES){
       current_line = 1;
+      update_output_buffer();
     }
   }
 
@@ -34,11 +45,10 @@ uint32_t data_callback(void) {
 }
 
 void renderer_init(void) {
-  for (int i =0; i < CVIDEO_LINES; i++) {
-    for (int j = 0; j < CVIDEO_PIX_PER_LINE / 32; j++) {
-      frame_buffer[i][j] = 0;
-    }
-  }
+  renderer_clear(output_buffer);
+  renderer_clear(drawing_buffer);
+  drawing_in_progress = false;
+  buffer_updated = false;
 
   // PIO starts with odd lines
   current_line = 1;
@@ -47,6 +57,17 @@ void renderer_init(void) {
   cvideo_init(pio0, CVIDEO_DATA_PIN, CVIDEO_SYNC_PIN, data_callback);
 }
 
+void renderer_begin_drawing(void) {
+  // CVIDEO uses output_buffer for output
+  // Renderer draws to frame_buffer
+  drawing_in_progress = true;
+  renderer_clear(drawing_buffer);
+}
+
+void renderer_end_drawing(void) {
+  drawing_in_progress = false;
+  buffer_updated = true;
+}
 
 void renderer_draw_rect(uint x, uint y, uint width, uint height) {
   for (int i = x; i < x + width; i++) {
@@ -72,11 +93,28 @@ void renderer_draw_image(unsigned int x, unsigned int y, unsigned int width, uns
   }
 }
 
+static void update_output_buffer(void){
+  if(!drawing_in_progress && buffer_updated){
+    // Swap drawing and output buffer
+    buffer_t *temp = output_buffer;
+    output_buffer = drawing_buffer;
+    drawing_buffer = temp;
+    buffer_updated = false;
+  }
+}
+
+static void renderer_clear(buffer_t *buffer) {
+  for (int i =0; i < CVIDEO_LINES; i++) {
+    for (int j = 0; j < CVIDEO_PIX_PER_LINE / 32; j++) {
+      (*buffer)[i][j] = 0;
+    }
+  }
+}
 
 static void set_bit(uint x, uint y, bool value) {
   uint index_x = x / 32;
   uint pos_x = x % 32;
 
   uint flag = value << (31 - pos_x);
-  frame_buffer[y][index_x] |= flag;
+  (*drawing_buffer)[y][index_x] |= flag;
 }
