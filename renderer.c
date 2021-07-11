@@ -115,6 +115,6 @@ static void set_bit(uint x, uint y, bool value) {
   uint index_x = x / 32;
   uint pos_x = x % 32;
 
-  uint flag = value << (31 - pos_x);
+  uint flag = value << pos_x;
   (*drawing_buffer)[y][index_x] |= flag;
 }

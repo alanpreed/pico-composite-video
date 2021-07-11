@@ -69,7 +69,7 @@ static inline void cvdata_program_init(PIO pio, uint sm, uint offset, float cloc
 
     // Enable autopull and set threshold to 32 bits
     // Note that register positions are the same for all state machines
-    c.shiftctrl = (1u<<PIO_SM0_SHIFTCTRL_AUTOPULL_LSB) |
+    c.shiftctrl |= (1u<<PIO_SM0_SHIFTCTRL_AUTOPULL_LSB) |
                   (0u<<PIO_SM0_SHIFTCTRL_PULL_THRESH_LSB);
 
     
