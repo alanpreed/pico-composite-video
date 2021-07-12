@@ -13,4 +13,8 @@ void renderer_draw_rect(unsigned int x, unsigned int y, unsigned int width, unsi
 
 void renderer_draw_image(unsigned int x, unsigned int y, unsigned int width, unsigned int height, char *data);
 
+void renderer_draw_character(unsigned int x, unsigned int y, unsigned int scale, char character);
+
+void renderer_draw_string(unsigned int x, unsigned int y, unsigned int scale, char *text, unsigned int length);
+
 #endif

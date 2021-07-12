@@ -3,8 +3,12 @@
 #include "connections.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include "font.xbm"
 
 #define LINE_WORD_COUNT CVIDEO_PIX_PER_LINE / 32
+
+#define CHAR_WIDTH font_width / 16
+#define CHAR_HEIGHT font_height / 16
 
 typedef uint32_t buffer_t[CVIDEO_LINES][LINE_WORD_COUNT];
 
@@ -112,6 +116,43 @@ void renderer_draw_image(unsigned int x, unsigned int y, unsigned int width, uns
 
       set_bit(x + i, y + j, !value);
     }
+  }
+}
+
+void renderer_draw_character(unsigned int x, unsigned int y, unsigned int scale, char character) {
+  uint8_t row = character / 16;
+  uint8_t column = character % 16;
+  uint32_t font_x = column * 10;
+  uint32_t font_y = row * 12;
+
+  for (int j = font_y; j < font_y + CHAR_HEIGHT; j++) {
+    for  (int i = font_x; i <  font_x + CHAR_WIDTH; i++) {
+      // XBM images pad rows with zeros
+      uint32_t array_position;
+      if (font_width %8 != 0) {
+        array_position = (j * (font_width + (8 - font_width % 8))) + i;
+      }
+      else {
+        array_position = (j * font_width) + i;
+      }
+      uint32_t array_index = array_position / 8;
+      // XBM image, low bits are first
+      uint32_t byte_position = array_position % 8;
+
+      uint8_t value = font_bits[array_index] >> byte_position & 1 ;
+
+      for (int sx = 0; sx < scale; sx++) {
+        for (int sy = 0; sy < scale; sy++) {
+          set_bit(x + ((i - font_x) * scale) + sx, y + ((j- font_y) * scale) + sy, !value);
+        }
+      }
+    }
+  }
+}
+
+void renderer_draw_string(unsigned int x, unsigned int y, unsigned int scale, char *text, unsigned int length){
+  for(int i = 0; i < length; i++) {
+    renderer_draw_character(x + (i * CHAR_WIDTH * scale), y, scale, text[i]);
   }
 }
 
