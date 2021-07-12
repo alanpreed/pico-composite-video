@@ -25,7 +25,7 @@ pico_generate_pio_header(${PROJECT_NAME}
 )
 # add_executable(pico-composite-video main.c)
 
-target_sources(pico-composite-video PRIVATE main.c cvideo.c renderer.c)
+target_sources(pico-composite-video PRIVATE main.c cvideo.c renderer.c pong.c)
 
 
 pico_set_program_name(pico-composite-video "pico-composite-video")

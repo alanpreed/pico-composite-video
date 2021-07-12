@@ -12,6 +12,8 @@
 
 typedef uint32_t buffer_t[CVIDEO_LINES][LINE_WORD_COUNT];
 
+uint32_t renderer_screen_width = CVIDEO_PIX_PER_LINE;
+uint32_t renderer_screen_height = CVIDEO_LINES;
 volatile int current_line;
 volatile int current_pix;
 bool drawing_in_progress;

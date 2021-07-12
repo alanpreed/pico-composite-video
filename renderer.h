@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+extern uint32_t renderer_screen_width;
+extern uint32_t renderer_screen_height;
+
 void renderer_init(void);
 
 void renderer_begin_drawing(void);
