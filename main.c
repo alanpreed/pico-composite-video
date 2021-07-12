@@ -31,28 +31,26 @@ int main()
     puts("Hello, world!");
     renderer_init();
 
-    // renderer_draw_rect(5, 300, 1, 40);
-    // renderer_draw_rect(10, 300, 1, 40);
-
-    // renderer_draw_rect(5, 410, 1, 40);
-    // renderer_draw_rect(10, 410, 1, 40);
-    // renderer_draw_rect(5, 450, 6, 40);
-
-    // renderer_draw_image(10, 100, test_width, test_height, test_bits);
-
     printf("Test\r\n");
     printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
 
     struct repeating_timer timer;
-    add_repeating_timer_ms(25, repeating_timer_callback, NULL, &timer);
+    add_repeating_timer_ms(100, repeating_timer_callback, NULL, &timer);
 
     while(1) {
         if (redraw) {
-            xpos++;
+            uint32_t time_before = time_us_32();
             renderer_begin_drawing();
-            renderer_draw_rect(xpos, 0, 50, 200);
+            renderer_draw_rect(xpos, 200, 10, 100);
+
+            renderer_draw_rect(768 - xpos, 400, 30, 100);
+
+            // renderer_draw_image(xpos, 100, test_width, test_height, test_bits);
             renderer_end_drawing();
+            uint32_t time_after = time_us_32();
             redraw = false;
+            xpos++;
+            printf("drawing time %d \r\n", time_after - time_before);
         }
     }
 

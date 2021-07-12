@@ -70,9 +70,31 @@ void renderer_end_drawing(void) {
 }
 
 void renderer_draw_rect(uint x, uint y, uint width, uint height) {
-  for (int i = x; i < x + width; i++) {
-    for (int j = y; j < y + height; j++) {
-      set_bit(i, j, true);
+  uint32_t x_word_start_index = x / 32;
+  uint32_t x_word_end_index = (x + width) / 32;
+
+  uint32_t x_word_start_boundary_offset = x % 32;
+  uint32_t x_word_end_boundary_offset = (x + width) % 32;
+
+  // Set first and last words manually
+  // Set other words quickly
+
+  for (int j = y; j < y + height; j++) {
+    // Small rectangles sometimes fit entirely within one word
+    if (x_word_start_index == x_word_end_index) {
+      uint32_t data = 0xFFFFFFFF;
+      data ^= 0xFFFFFFFF << x_word_start_boundary_offset;
+      data ^= 0xFFFFFFFF >> (32 - x_word_end_boundary_offset);
+      (*drawing_buffer)[j][x_word_start_index] |= data;
+    }
+    else {
+      // First word and last word only partially filled
+      (*drawing_buffer)[j][x_word_start_index] |= 0xFFFFFFFF << x_word_start_boundary_offset;
+      (*drawing_buffer)[j][x_word_end_index] |= 0xFFFFFFFF >> (32 - x_word_end_boundary_offset);
+
+      for (int i = x_word_start_index + 1; i < x_word_end_index; i++) {
+        (*drawing_buffer)[j][i] = 0xFFFFFFFF;
+      }
     }
   }
 }
