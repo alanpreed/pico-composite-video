@@ -46,7 +46,8 @@ int main()
   gpio_set_function(SERIAL_RX_PIN, GPIO_FUNC_UART);
   gpio_set_function(SERIAL_TX_PIN, GPIO_FUNC_UART);
 
-  puts("Hello, world!");
+  printf("Pi Pico Pong\r\n");
+  printf("Created by Alan Reed\r\n");
   pong_init();
 
   struct repeating_timer timer;

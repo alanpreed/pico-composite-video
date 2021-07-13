@@ -83,7 +83,7 @@ void renderer_run(void) {
     printf("Data underrun!\r\n");
   }
   if (drawing_overrun) {
-    printf("Drawing too slow! \r\n");
+    //printf("Drawing too slow! \r\n");
     drawing_overrun = false;
   }
 
