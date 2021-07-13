@@ -30,7 +30,8 @@
 #define BALL_SPEED 10
 #define BALL_START_X COURT_X + (COURT_WIDTH / 2) - (BALL_DIAMETER / 2)
 #define BALL_START_Y COURT_Y + (COURT_HEIGHT/ 2) - (BALL_DIAMETER / 2)
-#define BALL_START_ANGLE_LIMIT M_PI / 4
+#define BALL_START_ANGLE_MAX (double)(M_PI / 10)
+#define BALL_START_ANGLE_MIN (double)(M_PI / 30)
 
 typedef struct {
   int x;
@@ -152,7 +153,12 @@ void pong_move_player(uint32_t player_id, int direction) {
 void reset_ball(bool side) {
   ball.x = BALL_START_X;
   ball.y = BALL_START_Y;
-  double angle = ((double)rand() / (double)RAND_MAX) * BALL_START_ANGLE_LIMIT - BALL_START_ANGLE_LIMIT / 2;
+
+  double angle = BALL_START_ANGLE_MIN + ((double)rand() / (double)RAND_MAX) * (BALL_START_ANGLE_MAX - BALL_START_ANGLE_MIN);
+  if (rand() > RAND_MAX / 2) {
+    angle *= -1;
+  }
+
   printf("angle %f\r\n", angle);
   // Start the ball towards the player that scored
   if (side) {
