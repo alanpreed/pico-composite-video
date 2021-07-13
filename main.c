@@ -14,7 +14,6 @@
 #include "test.xbm"
 
 bool redraw = false;
-uint32_t xpos = 0;
 
 bool repeating_timer_callback(struct repeating_timer* t) {
     // printf("Repeat at %lld\n",time_us_64());
@@ -68,7 +67,7 @@ int main()
   printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
 
   struct repeating_timer timer;
-  add_repeating_timer_ms(100, repeating_timer_callback, NULL, &timer);
+  add_repeating_timer_ms(PONG_FRAME_INTERVAL_ms, repeating_timer_callback, NULL, &timer);
 
   gpio_pull_up(PLAYER1_BUTTON_DOWN);
   gpio_pull_up(PLAYER1_BUTTON_UP);
@@ -86,13 +85,11 @@ int main()
     }
 
     if (redraw) {
-        uint32_t time_before = time_us_32();
-        // printf("%d\r\n", rand());
+        // uint32_t time_before = time_us_32();
         pong_update();
         pong_draw();
-        uint32_t time_after = time_us_32();
+        // uint32_t time_after = time_us_32();
         redraw = false;
-        xpos++;
         // printf("drawing time %d \r\n", time_after - time_before);
         // while(1);
     }
