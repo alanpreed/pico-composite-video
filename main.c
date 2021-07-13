@@ -6,7 +6,8 @@
 #include "hardware/timer.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
-
+#include "renderer.h"
+#include "math.h"
 // #include "renderer.h"
 #include "connections.h"
 #include "pong.h"
@@ -54,43 +55,48 @@ void button_cb(unsigned int gpio, uint32_t events) {
 }
 
 int main()
- {
-    // Defaults: UART 0, TX pin 0, RX pin 1, baud rate 115200
-    stdio_init_all();
-    gpio_set_function(SERIAL_RX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(SERIAL_TX_PIN, GPIO_FUNC_UART);
+{
+  // Defaults: UART 0, TX pin 0, RX pin 1, baud rate 115200
+  stdio_init_all();
+  gpio_set_function(SERIAL_RX_PIN, GPIO_FUNC_UART);
+  gpio_set_function(SERIAL_TX_PIN, GPIO_FUNC_UART);
 
-    puts("Hello, world!");
-    pong_init();
+  puts("Hello, world!");
+  pong_init();
 
-    printf("Test\r\n");
-    printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
+  printf("Test\r\n");
+  printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
 
-    struct repeating_timer timer;
-    add_repeating_timer_ms(50, repeating_timer_callback, NULL, &timer);
+  struct repeating_timer timer;
+  add_repeating_timer_ms(100, repeating_timer_callback, NULL, &timer);
 
-    gpio_pull_up(PLAYER1_BUTTON_DOWN);
-    gpio_pull_up(PLAYER1_BUTTON_UP);
-    gpio_pull_up(PLAYER2_BUTTON_DOWN);
-    gpio_pull_up(PLAYER2_BUTTON_UP);
-    gpio_set_irq_enabled_with_callback(PLAYER1_BUTTON_DOWN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
-    gpio_set_irq_enabled_with_callback(PLAYER1_BUTTON_UP, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
-    gpio_set_irq_enabled_with_callback(PLAYER2_BUTTON_DOWN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
-    gpio_set_irq_enabled_with_callback(PLAYER2_BUTTON_UP, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
+  gpio_pull_up(PLAYER1_BUTTON_DOWN);
+  gpio_pull_up(PLAYER1_BUTTON_UP);
+  gpio_pull_up(PLAYER2_BUTTON_DOWN);
+  gpio_pull_up(PLAYER2_BUTTON_UP);
+  gpio_set_irq_enabled_with_callback(PLAYER1_BUTTON_DOWN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
+  gpio_set_irq_enabled_with_callback(PLAYER1_BUTTON_UP, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
+  gpio_set_irq_enabled_with_callback(PLAYER2_BUTTON_DOWN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
+  gpio_set_irq_enabled_with_callback(PLAYER2_BUTTON_UP, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &button_cb);
 
-    while(1) {
-        if (redraw) {
-            uint32_t time_before = time_us_32();
-            // printf("%d\r\n", rand());
-            pong_update();
-            pong_draw();
-            uint32_t time_after = time_us_32();
-            redraw = false;
-            xpos++;
-            // printf("drawing time %d \r\n", time_after - time_before);
-            // while(1);
-        }
+  while(1) {
+    if (was_empty) {
+      was_empty = false;
+      printf("Data empty\r\n");
     }
 
-    return 0;
+    if (redraw) {
+        uint32_t time_before = time_us_32();
+        // printf("%d\r\n", rand());
+        pong_update();
+        pong_draw();
+        uint32_t time_after = time_us_32();
+        redraw = false;
+        xpos++;
+        // printf("drawing time %d \r\n", time_after - time_before);
+        // while(1);
+    }
+  }
+
+  return 0;
 }

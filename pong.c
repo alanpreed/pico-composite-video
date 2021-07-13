@@ -1,13 +1,13 @@
 #include <stdint.h>
-#include "renderer.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include "vec2.h"
+#include "renderer.h"
 
-
-#define COURT_WIDTH 600
+#define COURT_WIDTH 300
 #define COURT_HEIGHT 400
 #define COURT_X (renderer_screen_width - COURT_WIDTH)/2
 #define COURT_Y (renderer_screen_height - COURT_HEIGHT)/2
@@ -24,7 +24,8 @@
 #define PLAYER_1_START_X COURT_X
 #define PLAYER_2_START_X COURT_X + COURT_WIDTH - PLAYER_WIDTH
 
-#define BAT_ANGLE_STEP M_PI / 73
+#define BAT_ANGLE_STEP M_PI / 64
+#define BAT_DIVSIONS 8
 
 #define BALL_DIAMETER 10
 #define BALL_SPEED 10
@@ -34,20 +35,17 @@
 #define BALL_START_ANGLE_MIN (double)(M_PI / 30)
 
 typedef struct {
-  int x;
-  int y;
+  vec2_t position;
+  vec2_t velocity;
   uint32_t width;
   uint32_t height;
   uint32_t score;
-  int v_y;
 } player_t;
 
 typedef struct {
-  int x;
-  int y;
+  vec2_t position;
+  vec2_t velocity;
   uint32_t diameter;
-  float v_x;
-  float v_y;
 } ball_t;
 
 typedef enum {
@@ -56,60 +54,79 @@ typedef enum {
   STATE_END
 } game_state_t;
 
-const float bat_angles[8] = {-3 * BAT_ANGLE_STEP, -2 *BAT_ANGLE_STEP, -BAT_ANGLE_STEP, 0, 0, BAT_ANGLE_STEP, 2 * BAT_ANGLE_STEP, 3 * BAT_ANGLE_STEP};
+// Bat is not actually flat, instead divided into 8 sections with different angles
+// following info on Wikipedia (https://en.wikipedia.org/wiki/Pong#Development_and_history)
+static const float bat_angles[8] = {-3 * BAT_ANGLE_STEP, -2 *BAT_ANGLE_STEP, -BAT_ANGLE_STEP, 0, 0, BAT_ANGLE_STEP, 2 * BAT_ANGLE_STEP, 3 * BAT_ANGLE_STEP};
+static player_t player_1;
+static player_t player_2;
+static ball_t ball;
+static char score_text[5];
+static game_state_t state;
 
-player_t player_1;
-player_t player_2;
-ball_t ball;
-char score_text[5];
-game_state_t state;
-
-void reset_ball(bool side);
+static void reset_ball(bool side);
+static void bounce_ball(float surface_angle);
 
 void pong_init(void) {
-  player_1 = (player_t){.x = PLAYER_1_START_X, .y = PLAYER_START_Y, .width = PLAYER_WIDTH, .height = PLAYER_HEIGHT, .score = 0, .v_y = 0};
-  player_2 = (player_t){.x = PLAYER_2_START_X, .y = PLAYER_START_Y, .width = PLAYER_WIDTH, .height = PLAYER_HEIGHT, .score = 0, .v_y = 0};
-
-  ball = (ball_t){.x = BALL_START_X, .y = BALL_START_Y, .diameter = BALL_DIAMETER, .v_x = 4, .v_y = 3};
+  player_1 = (player_t){.position = (vec2_t){.v0 = PLAYER_1_START_X, .v1 = PLAYER_START_Y},
+                        .velocity = (vec2_t){.v0 = 0, .v1 = 0}, 
+                        .width = PLAYER_WIDTH,
+                        .height = PLAYER_HEIGHT,
+                        .score = 0};
+  player_2 = (player_t){.position = (vec2_t){.v0 = PLAYER_2_START_X, .v1 = PLAYER_START_Y},
+                        .velocity = (vec2_t){.v0 = 0, .v1 = 0},
+                        .width = PLAYER_WIDTH,
+                        .height = PLAYER_HEIGHT,
+                        .score = 0};
+  ball = (ball_t){.position = (vec2_t){.v0 = BALL_START_X, .v1 = BALL_START_Y},
+                  .velocity = (vec2_t){.v0 = -BALL_SPEED, .v1 = 0},
+                  .diameter = BALL_DIAMETER};
+  
   reset_ball(rand() < RAND_MAX / 2);
-  state = STATE_START;
+  state = STATE_RUNNING;
   renderer_init();
 }
 
 void pong_update(void) {
-  ball.x += ball.v_x;
-  ball.y += ball.v_y;
+  if (state == STATE_RUNNING) {
+    ball.position = vec2_add(ball.position, ball.velocity);
+    player_1.position = vec2_add(player_1.position, player_1.velocity);
+    player_2.position = vec2_add(player_2.position, player_2.velocity);
 
-  player_1.y += player_1.v_y;
-  player_2.y += player_2.v_y;
+    // Bat collisions, with bats divided into angled segments
+    if (ball.position.v0 <= player_1.position.v0 + player_1.width && player_1.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_1.position.v1 + player_1.height) {
+      ball.position.v0 = player_1.position.v0 + player_1.width;
 
-  // Bat collisions
-  if (ball.x <= player_1.x + player_1.width && player_1.y - ball.diameter <= ball.y && ball.y <= player_1.y + player_1.height) {
-      ball.x = player_1.x + player_1.width;
-    ball.v_x *= -1;
-  }
+      uint32_t bat_index_position = (ball.position.v1 - player_1.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
+      // printf("pos %u\r\n", bat_index_position);
+      // ball.velocity.v0 *= -1;
+      bounce_ball(bat_angles[bat_index_position]);
+    }
+    else if (ball.position.v0 >= player_2.position.v0 - ball.diameter && player_2.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_2.position.v1 + player_2.height) {
+      ball.position.v0 = player_2.position.v0 - ball.diameter;
 
-  else if (ball.x >= player_2.x - ball.diameter && player_2.y - ball.diameter <= ball.y && ball.y <= player_2.y + player_2.height) {
-    ball.x = player_2.x - ball.diameter;
-    ball.v_x *= -1;
-  }
+      uint32_t bat_index_position = BAT_DIVSIONS - (ball.position.v1 - player_2.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
+      // printf("pos %u\r\n", bat_index_position);
+      bounce_ball(bat_angles[bat_index_position]);
+      // ball.velocity.v0 *= -1;
+    }
 
-  // Court borders
-  if (ball.y <= COURT_Y){
-    ball.y = COURT_Y;
-    ball.v_y = -ball.v_y;
-  }
-  else if (ball.y >= COURT_Y + COURT_HEIGHT - BALL_DIAMETER){
-    ball.y = COURT_Y + COURT_HEIGHT - BALL_DIAMETER;
-    ball.v_y = -ball.v_y;
-  }
-  else if (ball.x < COURT_X) {
-    player_2.score++;
-    reset_ball(0);
-  }
-  else if (ball.x > COURT_X + COURT_WIDTH - BALL_DIAMETER) {
-    player_1.score++;
-    reset_ball(1);
+    // Court borders - simple v_y reflection on top/bottom, scoring on left/right
+    if (ball.position.v1 <= COURT_Y){
+      ball.position.v1 = COURT_Y;
+      ball.velocity.v1 = -ball.velocity.v1;
+    }
+    else if (ball.position.v1 >= COURT_Y + COURT_HEIGHT - BALL_DIAMETER){
+      ball.position.v1 = COURT_Y + COURT_HEIGHT - BALL_DIAMETER;
+      ball.velocity.v1 = -ball.velocity.v1;
+    }
+    else if (ball.position.v0 < COURT_X) {
+      player_2.score++;
+      reset_ball(0);
+    }
+    else if (ball.position.v0 > COURT_X + COURT_WIDTH - BALL_DIAMETER) {
+      player_1.score++;
+      reset_ball(1);
+    }
   }
 }
 
@@ -129,9 +146,9 @@ void pong_draw(void) {
     renderer_draw_rect(COURT_X + ((COURT_WIDTH - NET_THICKNESS) / 2), (COURT_Y - COURT_EDGE_THICKNESS/2) + i * NET_SEGMENT_LENGTH, NET_THICKNESS, NET_SEGMENT_LENGTH);
   }
 
-  renderer_draw_rect(player_1.x, player_1.y, player_1.width, player_1.height);
-  renderer_draw_rect(player_2.x, player_2.y, player_2.width, player_2.height);
-  renderer_draw_rect(ball.x, ball.y, ball.diameter, ball.diameter);
+  renderer_draw_rect(player_1.position.v0, player_1.position.v1, player_1.width, player_1.height);
+  renderer_draw_rect(player_2.position.v0, player_2.position.v1, player_2.width, player_2.height);
+  renderer_draw_rect(ball.position.v0, ball.position.v1, ball.diameter, ball.diameter);
 
   sprintf(score_text, "%d", player_1.score);
   renderer_draw_string(COURT_X + COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text), JUSTIFY_CENTRE);
@@ -142,30 +159,44 @@ void pong_draw(void) {
 }
 
 void pong_move_player(uint32_t player_id, int direction) {
+  state = STATE_RUNNING;
   if (player_id == 1) {
-    player_1.v_y = PLAYER_SPEED * (direction % 2);
+    player_1.velocity.v1 = PLAYER_SPEED * (direction % 2);
   }
   else if (player_id == 2) {
-    player_2.v_y = PLAYER_SPEED * (direction % 2);
+    player_2.velocity.v1  = PLAYER_SPEED * (direction % 2);
   }
 }
 
-void reset_ball(bool side) {
-  ball.x = BALL_START_X;
-  ball.y = BALL_START_Y;
+static void reset_ball(bool side) {
+  ball.position.v0 = BALL_START_X;
+  ball.position.v1 = BALL_START_Y;
 
   double angle = BALL_START_ANGLE_MIN + ((double)rand() / (double)RAND_MAX) * (BALL_START_ANGLE_MAX - BALL_START_ANGLE_MIN);
   if (rand() > RAND_MAX / 2) {
     angle *= -1;
   }
+  // ball.velocity.v0 = -BALL_SPEED;
+  // ball.velocity.v1 = 0;
 
   printf("angle %f\r\n", angle);
   // Start the ball towards the player that scored
   if (side) {
-    ball.v_x = -BALL_SPEED * cos(angle);
+    ball.velocity.v0 = -BALL_SPEED * cos(angle);
   }
   else {
-    ball.v_x = BALL_SPEED * cos(angle);
+    ball.velocity.v0  = BALL_SPEED * cos(angle);
   }
-  ball.v_y = BALL_SPEED * sin(angle);
+  ball.velocity.v1 = BALL_SPEED * sin(angle);
+}
+
+static void bounce_ball(float surface_angle) {
+  vec2_t v = ball.velocity;
+  vec2_t n = (vec2_t){cos(surface_angle), sin(surface_angle)};
+
+  vec2_t u = vec2_scale(n, vec2_dot(v, n));
+  vec2_t w = vec2_subtract(v, u);
+  vec2_t v_after = vec2_subtract(w, u);
+
+  ball.velocity = v_after;
 }

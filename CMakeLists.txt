@@ -32,7 +32,6 @@ pico_set_program_name(pico-composite-video "pico-composite-video")
 pico_set_program_version(pico-composite-video "0.1")
 
 pico_enable_stdio_uart(pico-composite-video 1)
-pico_enable_stdio_usb(pico-composite-video 0)
 
 # Add the standard library to the build
 target_link_libraries(pico-composite-video pico_stdlib)

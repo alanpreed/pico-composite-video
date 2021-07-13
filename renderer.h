@@ -2,9 +2,12 @@
 #define __RENDERER_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 extern uint32_t renderer_screen_width;
 extern uint32_t renderer_screen_height;
+
+extern bool was_empty;
 
 typedef enum {
   JUSTIFY_LEFT,

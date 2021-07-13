@@ -27,6 +27,8 @@ static void set_bit(uint x, uint y, bool value);
 static void renderer_clear(buffer_t *buffer);
 static void update_output_buffer(void);
 
+bool was_empty = false;
+
 uint32_t data_callback(void) {
   uint32_t *line = (*output_buffer)[current_line];
   uint32_t data = line[current_pix];
@@ -46,7 +48,9 @@ uint32_t data_callback(void) {
       update_output_buffer();
     }
   }
-
+  if (pio_sm_is_tx_fifo_empty(pio0, 0)) {
+      was_empty = true;
+  }
   return data;
 }
 
