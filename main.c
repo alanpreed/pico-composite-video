@@ -3,14 +3,12 @@
 #include <stdlib.h>
 
 #include "hardware/timer.h"
-#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "connections.h"
 #include "pong.h"
 
-bool redraw = false;
 
-bool repeating_timer_callback(struct repeating_timer* t) {
+bool pong_gametick_callback(struct repeating_timer* t) {
   pong_tick();
   return true;
 }
@@ -51,11 +49,8 @@ int main()
   puts("Hello, world!");
   pong_init();
 
-  printf("Test\r\n");
-  printf("Clock speed %d\r\n", clock_get_hz(clk_sys));
-
   struct repeating_timer timer;
-  add_repeating_timer_ms(PONG_FRAME_INTERVAL_ms, repeating_timer_callback, NULL, &timer);
+  add_repeating_timer_ms(PONG_FRAME_INTERVAL_ms, pong_gametick_callback, NULL, &timer);
 
   gpio_pull_up(PLAYER1_BUTTON_DOWN);
   gpio_pull_up(PLAYER1_BUTTON_UP);

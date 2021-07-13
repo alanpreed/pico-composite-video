@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-#include "hardware/timer.h"
 #include "vec2.h"
 #include "renderer.h"
 
@@ -32,7 +31,8 @@
 #define BAT_DIVSIONS 8
 
 #define BALL_DIAMETER 10
-#define BALL_SPEED 3
+#define BALL_START_SPEED 2
+#define BALL_ACCELERATION 0.5
 #define BALL_START_X COURT_X + (COURT_WIDTH / 2) - (BALL_DIAMETER / 2)
 #define BALL_START_Y COURT_Y + (COURT_HEIGHT/ 2) - (BALL_DIAMETER / 2)
 #define BALL_START_ANGLE_MAX (double)(M_PI / 10)
@@ -89,7 +89,7 @@ void pong_init(void) {
                         .height = PLAYER_HEIGHT,
                         .score = 0};
   ball = (ball_t){.position = (vec2_t){.v0 = BALL_START_X, .v1 = BALL_START_Y},
-                  .velocity = (vec2_t){.v0 = -BALL_SPEED, .v1 = 0},
+                  .velocity = (vec2_t){.v0 = -BALL_START_SPEED, .v1 = 0},
                   .diameter = BALL_DIAMETER};
   
   update_game_flag = false;
@@ -188,18 +188,18 @@ static void reset_ball(bool side) {
   if (rand() > RAND_MAX / 2) {
     angle *= -1;
   }
-  // ball.velocity.v0 = -BALL_SPEED;
+  // ball.velocity.v0 = -BALL_START_SPEED;
   // ball.velocity.v1 = 0;
 
   // printf("angle %f\r\n", angle);
   // Start the ball towards the player that scored
   if (side) {
-    ball.velocity.v0 = -BALL_SPEED * cos(angle);
+    ball.velocity.v0 = -BALL_START_SPEED * cos(angle);
   }
   else {
-    ball.velocity.v0  = BALL_SPEED * cos(angle);
+    ball.velocity.v0  = BALL_START_SPEED * cos(angle);
   }
-  ball.velocity.v1 = BALL_SPEED * sin(angle);
+  ball.velocity.v1 = BALL_START_SPEED * sin(angle);
 }
 
 static void bounce_ball(float surface_angle) {
@@ -210,7 +210,8 @@ static void bounce_ball(float surface_angle) {
   vec2_t w = vec2_subtract(v, u);
   vec2_t v_after = vec2_subtract(w, u);
 
-  ball.velocity = v_after;
+  vec2_t v_increase = vec2_scale(v_after, BALL_ACCELERATION / vec2_length(v_after));
+  ball.velocity = vec2_add(v_after, v_increase);
 }
 
 static void update_player_position(player_t *player){
