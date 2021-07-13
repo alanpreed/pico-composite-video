@@ -24,6 +24,9 @@
 #define PLAYER_1_START_X COURT_X
 #define PLAYER_2_START_X COURT_X + COURT_WIDTH - PLAYER_WIDTH
 
+#define PLAYER_Y_MIN COURT_Y
+#define PLAYER_Y_MAX COURT_Y + COURT_HEIGHT - PLAYER_HEIGHT
+
 #define BAT_ANGLE_STEP M_PI / 64
 #define BAT_DIVSIONS 8
 
@@ -65,6 +68,7 @@ static game_state_t state;
 
 static void reset_ball(bool side);
 static void bounce_ball(float surface_angle);
+static void update_player_position(player_t *player);
 
 void pong_init(void) {
   player_1 = (player_t){.position = (vec2_t){.v0 = PLAYER_1_START_X, .v1 = PLAYER_START_Y},
@@ -89,8 +93,9 @@ void pong_init(void) {
 void pong_update(void) {
   if (state == STATE_RUNNING) {
     ball.position = vec2_add(ball.position, ball.velocity);
-    player_1.position = vec2_add(player_1.position, player_1.velocity);
-    player_2.position = vec2_add(player_2.position, player_2.velocity);
+
+    update_player_position(&player_1);
+    update_player_position(&player_2);
 
     // Bat collisions, with bats divided into angled segments
     if (ball.position.v0 <= player_1.position.v0 + player_1.width && player_1.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_1.position.v1 + player_1.height) {
@@ -98,7 +103,6 @@ void pong_update(void) {
 
       uint32_t bat_index_position = (ball.position.v1 - player_1.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
       // printf("pos %u\r\n", bat_index_position);
-      // ball.velocity.v0 *= -1;
       bounce_ball(bat_angles[bat_index_position]);
     }
     else if (ball.position.v0 >= player_2.position.v0 - ball.diameter && player_2.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_2.position.v1 + player_2.height) {
@@ -107,7 +111,6 @@ void pong_update(void) {
       uint32_t bat_index_position = BAT_DIVSIONS - (ball.position.v1 - player_2.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
       // printf("pos %u\r\n", bat_index_position);
       bounce_ball(bat_angles[bat_index_position]);
-      // ball.velocity.v0 *= -1;
     }
 
     // Court borders - simple v_y reflection on top/bottom, scoring on left/right
@@ -199,4 +202,14 @@ static void bounce_ball(float surface_angle) {
   vec2_t v_after = vec2_subtract(w, u);
 
   ball.velocity = v_after;
+}
+
+static void update_player_position(player_t *player){
+  player->position = vec2_add(player->position, player->velocity);
+  if (player->position.v1 < PLAYER_Y_MIN) {
+    player->position.v1 = PLAYER_Y_MIN;
+  }
+  else if (player->position.v1 > PLAYER_Y_MAX) {
+    player->position.v1 = PLAYER_Y_MAX;
+  }
 }
