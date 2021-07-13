@@ -152,9 +152,28 @@ void renderer_draw_character(unsigned int x, unsigned int y, unsigned int scale,
   }
 }
 
-void renderer_draw_string(unsigned int x, unsigned int y, unsigned int scale, char *text, unsigned int length){
-  for(int i = 0; i < length; i++) {
-    renderer_draw_character(x + (i * CHAR_WIDTH * scale), y, scale, text[i]);
+void renderer_draw_string(unsigned int x, unsigned int y, unsigned int scale, char *text, unsigned int length, renderer_text_justify_t justification){
+  switch (justification) {
+    case JUSTIFY_LEFT:
+      for(int i = 0; i < length; i++) {
+        renderer_draw_character(x + (i * CHAR_WIDTH * scale), y, scale, text[i]);
+      }
+      break;
+
+    case JUSTIFY_CENTRE:
+      for(int i = 0; i < length; i++) {
+        renderer_draw_character(x - (length * scale * CHAR_WIDTH / 2) + (i * CHAR_WIDTH * scale), y, scale, text[i]);
+      }
+      break;
+
+    case JUSTIFY_RIGHT:
+      for (int i = 0; i < length; i++) {
+        renderer_draw_character(x - ((length - i) * CHAR_WIDTH * scale), y, scale, text[i]);
+      }
+      break;
+
+    default:
+      printf("Invalid justification\r\n");
   }
 }
 

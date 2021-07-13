@@ -134,9 +134,9 @@ void pong_draw(void) {
   renderer_draw_rect(ball.x, ball.y, ball.diameter, ball.diameter);
 
   sprintf(score_text, "%d", player_1.score);
-  renderer_draw_string(COURT_X + COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text));
+  renderer_draw_string(COURT_X + COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text), JUSTIFY_CENTRE);
   sprintf(score_text, "%d", player_2.score);
-  renderer_draw_string(COURT_X + 3 * COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text));
+  renderer_draw_string(COURT_X + 3 * COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text), JUSTIFY_CENTRE);
 
   renderer_end_drawing();
 }
