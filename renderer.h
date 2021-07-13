@@ -7,19 +7,17 @@
 extern uint32_t renderer_screen_width;
 extern uint32_t renderer_screen_height;
 
-extern bool was_empty;
-
 typedef enum {
   JUSTIFY_LEFT,
   JUSTIFY_RIGHT,
   JUSTIFY_CENTRE,
 } renderer_text_justify_t;
 
-void renderer_init(void);
+typedef void (*renderer_draw_callback_t)(void);
 
-void renderer_begin_drawing(void);
+void renderer_init(renderer_draw_callback_t callback);
 
-void renderer_end_drawing(void);
+void renderer_run(void);
 
 void renderer_draw_rect(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 

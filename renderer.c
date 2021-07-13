@@ -5,34 +5,41 @@
 #include <stdbool.h>
 #include "font.xbm"
 
+// 32 bits per word
 #define LINE_WORD_COUNT CVIDEO_PIX_PER_LINE / 32
-
+// Font spritesheet is a grid of 16x16
 #define CHAR_WIDTH font_width / 16
 #define CHAR_HEIGHT font_height / 16
 
-typedef uint32_t buffer_t[CVIDEO_LINES][LINE_WORD_COUNT];
-
 uint32_t renderer_screen_width = CVIDEO_PIX_PER_LINE;
 uint32_t renderer_screen_height = CVIDEO_LINES;
-volatile int current_line;
-volatile int current_pix;
-bool drawing_in_progress;
-bool buffer_updated;
-buffer_t buffer_0;
-buffer_t buffer_1;
-buffer_t *output_buffer = &buffer_0;
-buffer_t *drawing_buffer = &buffer_1;
+
+// Screen data buffers
+typedef uint32_t buffer_t[CVIDEO_LINES][LINE_WORD_COUNT];
+static buffer_t buffer_0;
+static buffer_t buffer_1;
+static buffer_t *output_buffer = &buffer_0;
+static buffer_t *drawing_buffer = &buffer_1;
+
+// Counters and flags for cvideo data callback
+static volatile int current_line;
+static volatile int current_pix;
+static bool data_underrun;
+
+// Callback and flags for signalling frame redraw
+static renderer_draw_callback_t drawing_callback;
+static bool drawing_in_progress;
+static bool redraw_frame_requested;
+static bool drawing_overrun;
 
 static void set_bit(uint x, uint y, bool value);
 static void renderer_clear(buffer_t *buffer);
 static void update_output_buffer(void);
 
-bool was_empty = false;
-
+// Callback for shipping out image words to cvideo peripheral
 uint32_t data_callback(void) {
   uint32_t *line = (*output_buffer)[current_line];
   uint32_t data = line[current_pix];
-
   current_pix++;
 
   if (current_pix == LINE_WORD_COUNT) {
@@ -49,16 +56,19 @@ uint32_t data_callback(void) {
     }
   }
   if (pio_sm_is_tx_fifo_empty(pio0, 0)) {
-      was_empty = true;
+      data_underrun = true;
   }
   return data;
 }
 
-void renderer_init(void) {
+void renderer_init(renderer_draw_callback_t callback){
   renderer_clear(output_buffer);
   renderer_clear(drawing_buffer);
+  data_underrun = false;
   drawing_in_progress = false;
-  buffer_updated = false;
+  redraw_frame_requested = false;
+  drawing_overrun = false;
+  drawing_callback = callback;
 
   // PIO starts with odd lines
   current_line = 1;
@@ -67,19 +77,22 @@ void renderer_init(void) {
   cvideo_init(pio0, CVIDEO_DATA_PIN, CVIDEO_SYNC_PIN, data_callback);
 }
 
-void renderer_begin_drawing(void) {
-  // CVIDEO uses output_buffer for output
-  // Renderer draws to frame_buffer
-  if (!buffer_updated) {
+void renderer_run(void) {
+  if (data_underrun) {
+    data_underrun = false;
+    printf("Data underrun!\r\n");
+  }
+  if (drawing_overrun) {
+    printf("Drawing too slow! \r\n");
+    drawing_overrun = false;
+  }
+
+  if (redraw_frame_requested) {
     drawing_in_progress = true;
     renderer_clear(drawing_buffer);
-  }
-}
-
-void renderer_end_drawing(void) {
-  if (!buffer_updated) {
+    drawing_callback();
     drawing_in_progress = false;
-    buffer_updated = true;
+    redraw_frame_requested = false;
   }
 }
 
@@ -194,13 +207,16 @@ void renderer_draw_string(unsigned int x, unsigned int y, unsigned int scale, ch
 }
 
 static void update_output_buffer(void){
-  if(!drawing_in_progress && buffer_updated){
+  if(!drawing_in_progress){
     // Swap drawing and output buffer
     buffer_t *temp = output_buffer;
     output_buffer = drawing_buffer;
     drawing_buffer = temp;
-    buffer_updated = false;
   }
+  if (redraw_frame_requested) {
+    drawing_overrun = true;
+  }
+  redraw_frame_requested = true;
 }
 
 static void renderer_clear(buffer_t *buffer) {

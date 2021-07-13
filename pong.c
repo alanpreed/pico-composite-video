@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include "hardware/timer.h"
 #include "vec2.h"
 #include "renderer.h"
 
-#define COURT_WIDTH 300
+#define COURT_WIDTH 600
 #define COURT_HEIGHT 400
 #define COURT_X (renderer_screen_width - COURT_WIDTH)/2
 #define COURT_Y (renderer_screen_height - COURT_HEIGHT)/2
@@ -31,7 +32,7 @@
 #define BAT_DIVSIONS 8
 
 #define BALL_DIAMETER 10
-#define BALL_SPEED 10
+#define BALL_SPEED 3
 #define BALL_START_X COURT_X + (COURT_WIDTH / 2) - (BALL_DIAMETER / 2)
 #define BALL_START_Y COURT_Y + (COURT_HEIGHT/ 2) - (BALL_DIAMETER / 2)
 #define BALL_START_ANGLE_MAX (double)(M_PI / 10)
@@ -65,10 +66,16 @@ static player_t player_2;
 static ball_t ball;
 static char score_text[5];
 static game_state_t state;
+static bool update_game_flag;
 
+static void pong_draw(void);
 static void reset_ball(bool side);
 static void bounce_ball(float surface_angle);
 static void update_player_position(player_t *player);
+
+void pong_tick(void) {
+  update_game_flag = true;
+}
 
 void pong_init(void) {
   player_1 = (player_t){.position = (vec2_t){.v0 = PLAYER_1_START_X, .v1 = PLAYER_START_Y},
@@ -85,56 +92,60 @@ void pong_init(void) {
                   .velocity = (vec2_t){.v0 = -BALL_SPEED, .v1 = 0},
                   .diameter = BALL_DIAMETER};
   
+  update_game_flag = false;
   reset_ball(rand() < RAND_MAX / 2);
   state = STATE_RUNNING;
-  renderer_init();
+  renderer_init(pong_draw);
 }
 
 void pong_update(void) {
-  if (state == STATE_RUNNING) {
-    ball.position = vec2_add(ball.position, ball.velocity);
+  renderer_run();
+  if(update_game_flag) {
+    update_game_flag = false;
+    if (state == STATE_RUNNING) {
+      ball.position = vec2_add(ball.position, ball.velocity);
 
-    update_player_position(&player_1);
-    update_player_position(&player_2);
+      update_player_position(&player_1);
+      update_player_position(&player_2);
 
-    // Bat collisions, with bats divided into angled segments
-    if (ball.position.v0 <= player_1.position.v0 + player_1.width && player_1.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_1.position.v1 + player_1.height) {
-      ball.position.v0 = player_1.position.v0 + player_1.width;
+      // Bat collisions, with bats divided into angled segments
+      if (ball.position.v0 <= player_1.position.v0 + player_1.width && player_1.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_1.position.v1 + player_1.height) {
+        ball.position.v0 = player_1.position.v0 + player_1.width;
 
-      uint32_t bat_index_position = (ball.position.v1 - player_1.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
-      // printf("pos %u\r\n", bat_index_position);
-      bounce_ball(bat_angles[bat_index_position]);
-    }
-    else if (ball.position.v0 >= player_2.position.v0 - ball.diameter && player_2.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_2.position.v1 + player_2.height) {
-      ball.position.v0 = player_2.position.v0 - ball.diameter;
+        uint32_t bat_index_position = (ball.position.v1 - player_1.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
+        // printf("pos %u\r\n", bat_index_position);
+        bounce_ball(bat_angles[bat_index_position]);
+      }
+      else if (ball.position.v0 >= player_2.position.v0 - ball.diameter && player_2.position.v1 - ball.diameter <= ball.position.v1 && ball.position.v1 <= player_2.position.v1 + player_2.height) {
+        ball.position.v0 = player_2.position.v0 - ball.diameter;
 
-      uint32_t bat_index_position = BAT_DIVSIONS - (ball.position.v1 - player_2.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
-      // printf("pos %u\r\n", bat_index_position);
-      bounce_ball(bat_angles[bat_index_position]);
-    }
+        uint32_t bat_index_position = BAT_DIVSIONS - (ball.position.v1 - player_2.position.v1) / (PLAYER_HEIGHT / BAT_DIVSIONS);
+        // printf("pos %u\r\n", bat_index_position);
+        bounce_ball(bat_angles[bat_index_position]);
+      }
 
-    // Court borders - simple v_y reflection on top/bottom, scoring on left/right
-    if (ball.position.v1 <= COURT_Y){
-      ball.position.v1 = COURT_Y;
-      ball.velocity.v1 = -ball.velocity.v1;
-    }
-    else if (ball.position.v1 >= COURT_Y + COURT_HEIGHT - BALL_DIAMETER){
-      ball.position.v1 = COURT_Y + COURT_HEIGHT - BALL_DIAMETER;
-      ball.velocity.v1 = -ball.velocity.v1;
-    }
-    else if (ball.position.v0 < COURT_X) {
-      player_2.score++;
-      reset_ball(0);
-    }
-    else if (ball.position.v0 > COURT_X + COURT_WIDTH - BALL_DIAMETER) {
-      player_1.score++;
-      reset_ball(1);
+      // Court borders - simple v_y reflection on top/bottom, scoring on left/right
+      if (ball.position.v1 <= COURT_Y){
+        ball.position.v1 = COURT_Y;
+        ball.velocity.v1 = -ball.velocity.v1;
+      }
+      else if (ball.position.v1 >= COURT_Y + COURT_HEIGHT - BALL_DIAMETER){
+        ball.position.v1 = COURT_Y + COURT_HEIGHT - BALL_DIAMETER;
+        ball.velocity.v1 = -ball.velocity.v1;
+      }
+      else if (ball.position.v0 < COURT_X) {
+        player_2.score++;
+        reset_ball(0);
+      }
+      else if (ball.position.v0 > COURT_X + COURT_WIDTH - BALL_DIAMETER) {
+        player_1.score++;
+        reset_ball(1);
+      }
     }
   }
 }
 
 void pong_draw(void) {
-  renderer_begin_drawing();
   // Court top edge
   renderer_draw_rect(COURT_X - COURT_EDGE_THICKNESS, COURT_Y - COURT_EDGE_THICKNESS, COURT_WIDTH + 2 * COURT_EDGE_THICKNESS, COURT_EDGE_THICKNESS);
   // Court bottom edge
@@ -157,8 +168,6 @@ void pong_draw(void) {
   renderer_draw_string(COURT_X + COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text), JUSTIFY_CENTRE);
   sprintf(score_text, "%d", player_2.score);
   renderer_draw_string(COURT_X + 3 * COURT_WIDTH / 4, COURT_Y / 2, 2, score_text, strlen(score_text), JUSTIFY_CENTRE);
-
-  renderer_end_drawing();
 }
 
 void pong_move_player(uint32_t player_id, int direction) {
@@ -182,7 +191,7 @@ static void reset_ball(bool side) {
   // ball.velocity.v0 = -BALL_SPEED;
   // ball.velocity.v1 = 0;
 
-  printf("angle %f\r\n", angle);
+  // printf("angle %f\r\n", angle);
   // Start the ball towards the player that scored
   if (side) {
     ball.velocity.v0 = -BALL_SPEED * cos(angle);
