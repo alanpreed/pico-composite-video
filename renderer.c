@@ -138,8 +138,8 @@ void renderer_draw_image(unsigned int x, unsigned int y, unsigned int width, uns
         // XBM image, low bits are first
         uint32_t byte_position = array_position % 8;
 
-        uint8_t value = data[array_index] >> byte_position & 1 ;//(1 << (7 - byte_position));
-
+        uint8_t value = data[array_index] >> byte_position & 1 ;
+        // XBM images use 1 for black, so invert values
         set_bit(x + i, y + j, !value);
       }
     }
